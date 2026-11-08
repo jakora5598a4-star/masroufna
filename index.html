@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق مصروفنا - إدارة المصروفات الجماعية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #064e3b;
+            --primary-light: #047857;
+            --accent: #d97706;
+            --accent-gold: #f59e0b;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #10b981;
+            --shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        body.dark-mode {
+            --bg-main: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 80px; }
+
+        /* Header & Navbar */
+        header { background: linear-gradient(135deg, var(--primary), #022c22); color: white; padding: 1.5rem; text-align: center; border-bottom: 3px solid var(--accent-gold); box-shadow: var(--shadow); position: relative; }
+        header h1 { font-size: 1.8rem; font-weight: 800; color: #fef3c7; }
+        header p { font-size: 0.9rem; opacity: 0.85; margin-top: 4px; }
+        .theme-toggle { position: absolute; left: 1rem; top: 1.5rem; background: rgba(255,255,255,0.15); border: none; color: white; padding: 0.5rem 0.8rem; border-radius: 20px; cursor: pointer; }
+
+        .container { max-width: 1000px; margin: 1.5rem auto; padding: 0 1rem; }
+
+        /* Financial Cards Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: var(--card-bg); border-radius: 12px; padding: 1.2rem; border-right: 5px solid var(--primary-light); box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .stat-card.gold { border-right-color: var(--accent-gold); }
+        .stat-card.danger { border-right-color: var(--danger); }
+        .stat-card.success { border-right-color: var(--success); }
+        .stat-card h3 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
+        .stat-card .amount { font-size: 1.4rem; font-weight: 700; }
+
+        /* Progress Bar */
+        .progress-box { background: var(--card-bg); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1.5rem; box-shadow: var(--shadow); }
+        .progress-header { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; }
+        .progress-bar-bg { width: 100%; background: var(--border); height: 12px; border-radius: 6px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--success), var(--accent-gold), var(--danger)); width: 0%; transition: width 0.5s ease; }
+
+        /* Action Buttons */
+        .actions-bar { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .btn { flex: 1; min-width: 140px; padding: 0.8rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: var(--shadow); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-light); }
+        .btn-gold { background: var(--accent-gold); color: white; }
+        .btn-secondary { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border); }
+
+        /* Tabs & Panels */
+        .tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 4px; }
+        .tab-btn { padding: 0.6rem 1.2rem; background: none; border: none; font-weight: bold; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        body.dark-mode .tab-btn.active { color: var(--accent-gold); border-bottom-color: var(--accent-gold); }
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* Lists & Tables */
+        .card-list { display: grid; gap: 1rem; }
+        .item-card { background: var(--card-bg); border-radius: 10px; padding: 1rem; border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center; }
+        .item-info h4 { font-size: 1rem; margin-bottom: 4px; }
+        .item-info p { font-size: 0.8rem; color: var(--text-muted); }
+        .item-badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+        .badge-positive { background: #dcfce7; color: #166534; }
+        .badge-negative { background: #fee2e2; color: #991b1b; }
+
+        /* Forms & Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; padding: 1rem; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--card-bg); width: 100%; max-width: 500px; border-radius: 12px; padding: 1.5rem; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; color: var(--text-muted); }
+        .form-control { width: 100%; padding: 0.7rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-size: 0.95rem; }
+        .form-row { display: flex; gap: 0.8rem; }
+        .form-row .form-group { flex: 1; }
+
+        /* Member List & Balance */
+        .member-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+        .settlement-card { background: var(--card-bg); border-left: 4px solid var(--accent-gold); padding: 1rem; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); }
+
+        /* Responsive Utilities */
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .actions-bar { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="theme-toggle" onclick="toggleTheme()">🌙 الوضع</button>
+        <h1>تطبيق مصروفنا</h1>
+        <p id="group-subtitle">إدارة المصروفات والمشتريات الجماعية الذكية</p>
+    </header>
+
+    <div class="container">
+
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>الميزانية الكلية</h3>
+                <div class="amount" id="stat-budget">0</div>
+            </div>
+            <div class="stat-card danger">
+                <h3>إجمالي المصروفات</h3>
+                <div class="amount" id="stat-expenses">0</div>
+            </div>
+            <div class="stat-card success">
+                <h3>المبلغ المتبقي</h3>
+                <div class="amount" id="stat-remaining">0</div>
+            </div>
+            <div class="stat-card gold">
+                <h3>إجمالي المساهمات المدفوعة</h3>
+                <div class="amount" id="stat-contributions">0</div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-box">
+            <div class="progress-header">
+                <span>نسبة استهلاك الميزانية</span>
+                <span id="progress-text">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Main Buttons -->
+        <div class="actions-bar">
+            <button class="btn btn-primary" onclick="openModal('expense-modal')">➕ إضافة مصروف</button>
+            <button class="btn btn-gold" onclick="openModal('deposit-modal')">💰 إضافة مساهمة</button>
+            <button class="btn btn-secondary" onclick="switchTab('settlements')">⚖️ التسويات المالية</button>
+            <button class="btn btn-secondary" onclick="openModal('settings-modal')">⚙️ أسعار الصرف والعملة</button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('overview')">الرئيسية والسجل</button>
+            <button class="tab-btn" onclick="switchTab('members')">الأعضاء والتوزيع</button>
+            <button class="tab-btn" onclick="switchTab('settlements')">التسويات الذكية</button>
+            <button class="tab-btn" onclick="switchTab('reports')">التقارير البيانية</button>
+        </div>
+
+        <!-- Tab 1: Overview & Transactions -->
+        <div id="tab-overview" class="panel active">
+            <h3 style="margin-bottom: 1rem;">سجل العمليات الأخير</h3>
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <input type="text" id="search-input" class="form-control" placeholder="بحث في العمليات..." oninput="renderTransactions()">
+                <select id="filter-type" class="form-control" onchange="renderTransactions()">
+                    <option value="all">كل العمليات</option>
+                    <option value="expense">المصروفات فقط</option>
+                    <option value="deposit">المساهمات فقط</option>
+                </select>
+            </div>
+            <div class="card-list" id="transaction-list">
+                <!-- Dynamic Items -->
+            </div>
+        </div>
+
+        <!-- Tab 2: Members -->
+        <div id="tab-members" class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>الأعضاء والأرصدة</h3>
+                <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="openModal('member-modal')">➕ عضو جديد</button>
+            </div>
+            <div id="members-list">
+                <!-- Dynamic Member Cards -->
+            </div>
+        </div>
+
+        <!-- Tab 3: Smart Settlements -->
+        <div id="tab-settlements" class="panel">
+            <h3 style="margin-bottom: 1rem;">التسويات المالية المقترحة (أقل عدد تحويلات)</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">محسوبة بالعملة الأساسية لتسوية جميع الديون بين الأعضاء:</p>
+            <div id="settlements-list">
+                <!-- Dynamic Settlements -->
+            </div>
+        </div>
+
+        <!-- Tab 4: Reports -->
+        <div id="tab-reports" class="panel">
+            <h3 style="margin-bottom: 1rem;">تحليل المصروفات حسب التصنيف</h3>
+            <div style="max-width: 400px; margin: auto;">
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div style="margin-top: 2rem; display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="exportCSV()">📁 تصدير Excel (CSV)</button>
+                <button class="btn btn-secondary" onclick="window.print()">🖨️ طباعة التقرير</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal: Add Expense -->
+    <div class="modal" id="expense-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>تسجيل شراء / مصروف جديد</h3>
+                <button onclick="closeModal('expense-modal')" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">✕</button>
+            </div>
+            <form id="expense-form" onsubmit="saveExpense(event)">
+                <div class="form-group">
+                    <label>اسم السلعة / المصروف</label>
+                    <input type="text" id="exp-title" class="form-control" required placeholder="مثال: خضار وفواكه">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>المبلغ</label>
+                        <input type="number" step="0.01" id="exp-amount" class="form-control" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>العملة</label>
+                        <select id="exp-currency" class="form-control">
+                            <option value="USD">USD ($)</option>
+                            <option value="TRY">TRY (₺)</option>
+                            <option value="SYP">SYP (ل.س)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>التصنيف</label>
+                        <select id="exp-category" class="form-control">
+                            <option>المواد الغذائية</option>
+                            <option>الخضار والفواكه</option>
+                            <option>اللحوم والدجاج</option>
+                            <option>المشروبات</option>
+                            <option>المنظفات</option>
+                            <option>المواصلات</option>
+                            <option>الكهرباء والمياه</option>
+                            <option>الإنترنت والاتصالات</option>
+                            <option>الاحتياجات المنزلية</option>
+                            <option>المصروفات الطارئة</option>
+                            <option>أخرى</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>من دفع؟</label>
+                        <select id="exp-payer" class="form-control"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>طريقة التقسيم</label>
+                    <select id="exp-split-type" class="form-control" onchange="toggleSplitInputs()">
+                        <option value="equal">تقسيم بالتساوي على المستفيدين</option>
+                        <option value="custom">مبالغ مخصصة لكل شخص</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الأعضاء المستفيدون</label>
+                    <div id="exp-beneficiaries" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">حفظ المصروف</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Deposit -->
+    <div class="modal" id="deposit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>تسجيل مساهمة / إيداع مالية</h3>
+                <button onclick="closeModal('deposit-modal')" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">✕</button>
+            </div>
+            <form id="deposit-form" onsubmit="saveDeposit(event)">
+                <div class="form-group">
+                    <label>اسم العضو المساهم</label>
+                    <select id="dep-member" class="form-control"></select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>المبلغ</label>
+                        <input type="number" step="0.01" id="dep-amount" class="form-control" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>العملة</label>
+                        <select id="dep-currency" class="form-control">
+                            <option value="USD">USD ($)</option>
+                            <option value="TRY">TRY (₺)</option>
+                            <option value="SYP">SYP (ل.س)</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-gold" style="width:100%;">إضافة المساهمة</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Settings & Exchange Rates -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إعدادات العملات وأسعار الصرف</h3>
+                <button onclick="closeModal('settings-modal')" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">✕</button>
+            </div>
+            <form onsubmit="saveSettings(event)">
+                <div class="form-group">
+                    <label>العملة الأساسية للتطبيق</label>
+                    <select id="base-currency-select" class="form-control">
+                        <option value="USD">USD - دولار أمريكي</option>
+                        <option value="TRY">TRY - ليرة تركية</option>
+                        <option value="SYP">SYP - ليرة سورية</option>
+                    </select>
+                </div>
+                <hr style="margin: 1rem 0; border:0; border-top:1px solid var(--border);">
+                <p style="font-size:0.85rem; font-weight:bold; margin-bottom:8px;">أسعار الصرف يدوياً (مقابل 1 دولار USD):</p>
+                <div class="form-group">
+                    <label>1 USD = كم ليرة تركية (TRY)؟</label>
+                    <input type="number" step="0.01" id="rate-try" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>1 USD = كم ليرة سورية (SYP)؟</label>
+                    <input type="number" step="1" id="rate-syp" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">حفظ الإعدادات</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Member -->
+    <div class="modal" id="member-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة عضو جديد للمجموعة</h3>
+                <button onclick="closeModal('member-modal')" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">✕</button>
+            </div>
+            <form onsubmit="saveMember(event)">
+                <div class="form-group">
+                    <label>اسم العضو</label>
+                    <input type="text" id="new-member-name" class="form-control" required placeholder="مثال: أحمد">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">إضافة العضو</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // State & Local Data Setup
+        let appData = {
+            baseCurrency: 'USD',
+            rates: { USD: 1, TRY: 32.5, SYP: 14500 },
+            members: [
+                { id: '1', name: 'أحمد' },
+                { id: '2', name: 'محمد' },
+                { id: '3', name: 'إبراهيم' },
+                { id: '4', name: 'خالد' },
+                { id: '5', name: 'عمر' }
+            ],
+            transactions: []
+        };
+
+        let chartInstance = null;
+
+        // Initialize App
+        window.onload = function() {
+            const saved = localStorage.getItem('masroufna_data');
+            if (saved) {
+                appData = JSON.parse(saved);
+            }
+            updateCurrencyDropdowns();
+            renderAll();
+        };
+
+        function saveData() {
+            localStorage.setItem('masroufna_data', JSON.stringify(appData));
+            renderAll();
+        }
+
+        // Currency Conversion Engine
+        function convertCurrency(amount, fromCurr, toCurr) {
+            if (fromCurr === toCurr) return amount;
+            const amountInUSD = amount / appData.rates[fromCurr];
+            return amountInUSD * appData.rates[toCurr];
+        }
+
+        function formatMoney(amount, curr = appData.baseCurrency) {
+            const symbols = { USD: '$', TRY: '₺', SYP: 'ل.س' };
+            return `${Number(amount).toLocaleString('ar-EG', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${symbols[curr] || curr}`;
+        }
+
+        // Rendering Dashboard & Logic
+        function renderAll() {
+            renderStats();
+            renderTransactions();
+            renderMembers();
+            renderSettlements();
+            renderChart();
+            populateSelects();
+        }
+
+        function renderStats() {
+            let totalExpensesBase = 0;
+            let totalDepositsBase = 0;
+
+            appData.transactions.forEach(t => {
+                const amountBase = convertCurrency(t.amount, t.currency, appData.baseCurrency);
+                if (t.type === 'expense') totalExpensesBase += amountBase;
+                if (t.type === 'deposit') totalDepositsBase += amountBase;
+            });
+
+            const remainingBase = totalDepositsBase - totalExpensesBase;
+            const progress = totalDepositsBase > 0 ? Math.min(100, (totalExpensesBase / totalDepositsBase) * 100) : 0;
+
+            document.getElementById('stat-budget').innerText = formatMoney(totalDepositsBase);
+            document.getElementById('stat-expenses').innerText = formatMoney(totalExpensesBase);
+            document.getElementById('stat-remaining').innerText = formatMoney(remainingBase);
+            document.getElementById('stat-contributions').innerText = formatMoney(totalDepositsBase);
+            document.getElementById('progress-text').innerText = `${progress.toFixed(1)}%`;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+        }
+
+        function renderTransactions() {
+            const list = document.getElementById('transaction-list');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const filter = document.getElementById('filter-type').value;
+
+            list.innerHTML = '';
+
+            const filtered = appData.transactions.filter(t => {
+                const matchesSearch = t.title.toLowerCase().includes(search) || t.payerName.toLowerCase().includes(search);
+                const matchesType = filter === 'all' || t.type === filter;
+                return matchesSearch && matchesType;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:2rem;">لا يوجد عمليات مسجلة حتى الآن.</p>';
+                return;
+            }
+
+            filtered.reverse().forEach(t => {
+                const isExpense = t.type === 'expense';
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.innerHTML = `
+                    <div class="item-info">
+                        <h4>${t.title}</h4>
+                        <p>${isExpense ? 'دفع بواسطة: ' + t.payerName + ' | تصنيف: ' + t.category : 'مساهمة من: ' + t.payerName}</p>
+                        <p style="font-size:0.75rem;">${new Date(t.date).toLocaleString('ar-EG')}</p>
+                    </div>
+                    <div style="text-align:left;">
+                        <span class="item-badge ${isExpense ? 'badge-negative' : 'badge-positive'}">
+                            ${isExpense ? '-' : '+'}${formatMoney(t.amount, t.currency)}
+                        </span>
+                        <br>
+                        <button onclick="deleteTransaction('${t.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.8rem; margin-top:5px;">حذف</button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function renderMembers() {
+            const list = document.getElementById('members-list');
+            list.innerHTML = '';
+
+            appData.members.forEach(member => {
+                let paidBase = 0;
+                let consumedBase = 0;
+
+                appData.transactions.forEach(t => {
+                    const amountBase = convertCurrency(t.amount, t.currency, appData.baseCurrency);
+                    if (t.type === 'deposit' && t.payerId === member.id) {
+                        paidBase += amountBase;
+                    }
+                    if (t.type === 'expense') {
+                        if (t.payerId === member.id) paidBase += amountBase;
+                        if (t.beneficiaries && t.beneficiaries.includes(member.id)) {
+                            consumedBase += amountBase / t.beneficiaries.length;
+                        }
+                    }
+                });
+
+                const balance = paidBase - consumedBase;
+
+                const card = document.createElement('div');
+                card.className = 'member-row';
+                card.innerHTML = `
+                    <div>
+                        <strong>👤 ${member.name}</strong>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">
+                            دفع: ${formatMoney(paidBase)} | استهلك: ${formatMoney(consumedBase)}
+                        </div>
+                    </div>
+                    <div style="text-align:left;">
+                        <span class="item-badge ${balance >= 0 ? 'badge-positive' : 'badge-negative'}">
+                            الرصيد: ${formatMoney(balance)}
+                        </span>
+                        ${appData.members.length > 2 ? `<button onclick="deleteMember('${member.id}')" style="background:none; border:none; color:var(--danger); margin-right:8px; cursor:pointer;">✕</button>` : ''}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function renderSettlements() {
+            const list = document.getElementById('settlements-list');
+            list.innerHTML = '';
+
+            let balances = {};
+            appData.members.forEach(m => balances[m.id] = 0);
+
+            appData.transactions.forEach(t => {
+                const amountBase = convertCurrency(t.amount, t.currency, appData.baseCurrency);
+                if (t.type === 'deposit') {
+                    balances[t.payerId] += amountBase;
+                } else if (t.type === 'expense') {
+                    balances[t.payerId] += amountBase;
+                    const splitAmount = amountBase / t.beneficiaries.length;
+                    t.beneficiaries.forEach(bId => {
+                        balances[bId] -= splitAmount;
+                    });
+                }
+            });
+
+            let debtors = [];
+            let creditors = [];
+
+            for (let mId in balances) {
+                const bal = balances[mId];
+                const memberName = appData.members.find(m => m.id === mId)?.name || '';
+                if (bal < -0.01) debtors.push({ id: mId, name: memberName, amount: -bal });
+                if (bal > 0.01) creditors.push({ id: mId, name: memberName, amount: bal });
+            }
+
+            debtors.sort((a,b) => b.amount - a.amount);
+            creditors.sort((a,b) => b.amount - a.amount);
+
+            let settlements = [];
+            let i = 0, j = 0;
+
+            while (i < debtors.length && j < creditors.length) {
+                let pay = Math.min(debtors[i].amount, creditors[j].amount);
+                settlements.push({
+                    from: debtors[i].name,
+                    to: creditors[j].name,
+                    amount: pay
+                });
+
+                debtors[i].amount -= pay;
+                creditors[j].amount -= pay;
+
+                if (debtors[i].amount < 0.01) i++;
+                if (creditors[j].amount < 0.01) j++;
+            }
+
+            if (settlements.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:1rem;">جميع الحسابات متوازنة تماماً! لا يوجد ديون مستحقة.</p>';
+                return;
+            }
+
+            settlements.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'settlement-card';
+                item.innerHTML = `
+                    💸 يدفع <strong>${s.from}</strong> إلى <strong>${s.to}</strong> مبلغاً وقدره: 
+                    <span style="color:var(--primary); font-weight:bold;">${formatMoney(s.amount)}</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Form Handlers & Actions
+        function saveExpense(e) {
+            e.preventDefault();
+            const title = document.getElementById('exp-title').value;
+            const amount = parseFloat(document.getElementById('exp-amount').value);
+            const currency = document.getElementById('exp-currency').value;
+            const category = document.getElementById('exp-category').value;
+            const payerId = document.getElementById('exp-payer').value;
+            const payerName = appData.members.find(m => m.id === payerId).name;
+
+            const checkboxes = document.querySelectorAll('.beneficiary-check:checked');
+            const beneficiaries = Array.from(checkboxes).map(c => c.value);
+
+            if (beneficiaries.length === 0) {
+                alert('يرجى اختيار عضو واحد مستفيد على الأقل.');
+                return;
+            }
+
+            appData.transactions.push({
+                id: Date.now().toString(),
+                type: 'expense',
+                title, amount, currency, category, payerId, payerName, beneficiaries,
+                date: new Date().toISOString()
+            });
+
+            saveData();
+            closeModal('expense-modal');
+            document.getElementById('expense-form').reset();
+        }
+
+        function saveDeposit(e) {
+            e.preventDefault();
+            const payerId = document.getElementById('dep-member').value;
+            const payerName = appData.members.find(m => m.id === payerId).name;
+            const amount = parseFloat(document.getElementById('dep-amount').value);
+            const currency = document.getElementById('dep-currency').value;
+
+            appData.transactions.push({
+                id: Date.now().toString(),
+                type: 'deposit',
+                title: 'إيداع / مساهمة مالية',
+                amount, currency, payerId, payerName,
+                date: new Date().toISOString()
+            });
+
+            saveData();
+            closeModal('deposit-modal');
+            document.getElementById('deposit-form').reset();
+        }
+
+        function saveMember(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-member-name').value;
+            appData.members.push({ id: Date.now().toString(), name });
+            saveData();
+            closeModal('member-modal');
+        }
+
+        function deleteMember(id) {
+            if (confirm('هل أنت تأكد من حذف هذا العضو؟')) {
+                appData.members = appData.members.filter(m => m.id !== id);
+                saveData();
+            }
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('هل ترغب بحذف هذه العملية؟')) {
+                appData.transactions = appData.transactions.filter(t => t.id !== id);
+                saveData();
+            }
+        }
+
+        function saveSettings(e) {
+            e.preventDefault();
+            appData.baseCurrency = document.getElementById('base-currency-select').value;
+            appData.rates.TRY = parseFloat(document.getElementById('rate-try').value);
+            appData.rates.SYP = parseFloat(document.getElementById('rate-syp').value);
+            saveData();
+            closeModal('settings-modal');
+        }
+
+        // Helpers & UI Updates
+        function populateSelects() {
+            const expPayer = document.getElementById('exp-payer');
+            const depMember = document.getElementById('dep-member');
+            const benContainer = document.getElementById('exp-beneficiaries');
+
+            expPayer.innerHTML = '';
+            depMember.innerHTML = '';
+            benContainer.innerHTML = '';
+
+            appData.members.forEach(m => {
+                expPayer.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+                depMember.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+                benContainer.innerHTML += `
+                    <label style="font-size:0.85rem; background:var(--bg-main); padding:4px 8px; border-radius:4px; border:1px solid var(--border);">
+                        <input type="checkbox" class="beneficiary-check" value="${m.id}" checked> ${m.name}
+                    </label>
+                `;
+            });
+
+            document.getElementById('base-currency-select').value = appData.baseCurrency;
+            document.getElementById('rate-try').value = appData.rates.TRY;
+            document.getElementById('rate-syp').value = appData.rates.SYP;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function updateCurrencyDropdowns() {}
+
+        // Chart Rendering
+        function renderChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            const categories = {};
+
+            appData.transactions.filter(t => t.type === 'expense').forEach(t => {
+                const amount = convertCurrency(t.amount, t.currency, appData.baseCurrency);
+                categories[t.category] = (categories[t.category] || 0) + amount;
+            });
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categories),
+                    datasets: [{
+                        data: Object.values(categories),
+                        backgroundColor: ['#064e3b', '#d97706', '#10b981', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b']
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        // Export Data (CSV)
+        function exportCSV() {
+            let csv = 'التاريخ,النوع,السلعة/المساهم,المبلغ,العملة,التصنيف\n';
+            appData.transactions.forEach(t => {
+                csv += `"${t.date}","${t.type}","${t.title}","${t.amount}","${t.currency}","${t.category || ''}"\n`;
+            });
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'masroufna_report.csv';
+            link.click();
+        }
+    </script>
+</body>
+</html>
